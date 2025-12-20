@@ -2,46 +2,71 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title> Merry Christmas Manh Manh 🎄</title>
+<title>Realistic 3D Christmas Tree</title>
 <style>
-  html, body {
-    margin: 0; padding: 0;
-    background: radial-gradient(circle at center, #051923 0%, #000508 100%);
-    overflow: hidden; height: 100%;
-  }
-  canvas { display: block; }
-  
-  #scrolling-text {
-    position: fixed; bottom: 50px; white-space: nowrap; width: 100%;
-    color: #ffcf71; font-family: 'Segoe Script', cursive, sans-serif;
-    font-size: 26px; text-shadow: 0 0 15px rgba(255, 165, 0, 0.7);
-    pointer-events: none; overflow: hidden; z-index: 100;
-  }
-  .marquee {
-    display: inline-block; padding-left: 100%;
-    animation: marquee 35s linear infinite;
-  }
-  @keyframes marquee {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(-100%, 0); }
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top, #0b2a35, #020b10);
+  overflow: hidden;
+}
+canvas {
+  display: block;
+}
+#hint {
+  position: fixed;
+  bottom: 20px;
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,0.6);
+  font-family: sans-serif;
+  font-size: 14px;
+  pointer-events: none;
+}
 </style>
 </head>
 <body>
 
-<audio id="bgm" autoplay loop muted>
+<!-- 🎵 AUTOPLAY (muted để không bị chặn) -->
+<audio id="bgm" loop muted>
   <source src="./Lofi Jingle Bells.mp3" type="audio/mpeg">
 </audio>
 
-<div id="scrolling-text">
-  <div class="marquee">
-    Merry Christmas Manh Manh ❄️ Chúc Manh một mùa Giáng sinh ấm áp, lung linh và luôn rạng rỡ như những ánh sao này! ✨ 🎄 🎁 ♥️
-  </div>
-</div>
-
 <canvas id="c"></canvas>
+<div id="hint">Click anywhere to enable sound 🎵</div>
 
 <script>
+const bgm = document.getElementById("bgm");
+const hint = document.getElementById("hint");
+
+// 🔊 bật tiếng sau click
+let soundEnabled = false;
+function enableSound() {
+  if (soundEnabled) return;
+  soundEnabled = true;
+
+  bgm.muted = false;
+  bgm.volume = 0;
+
+  bgm.play().then(() => {
+    const fade = setInterval(() => {
+      if (bgm.volume < 0.6) {
+        bgm.volume += 0.02;
+      } else {
+        clearInterval(fade);
+      }
+    }, 120);
+  }).catch(err => {
+    console.log("Audio play blocked:", err);
+  });
+
+  hint.style.display = "none";
+}
+
+document.addEventListener("click", enableSound);
+document.addEventListener("touchstart", enableSound);
+
+// ================= CANVAS =================
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
@@ -50,166 +75,365 @@ function resize() {
   w = canvas.width = window.innerWidth;
   h = canvas.height = window.innerHeight;
   cx = w / 2;
-  cy = h * 0.8;
+  cy = h * 0.65;
 }
 window.addEventListener("resize", resize);
 resize();
 
-// ================= CONFIG 3D =================
+// ================= CONFIG =================
 const TREE_HEIGHT = 520;
-const TREE_RADIUS = 200;
+const TREE_RADIUS = 190;
+const TREE_POINTS = 4500;
+const STAR_OFFSET = 25;
+const STAR_POINTS = 320;
+const STAR_OUTER = 14;
+const STAR_INNER = 6;
+const SIGN_TEXT_1 = "For Manh Manh ❄️";
+const SIGN_TEXT_2 = "— from MNC";
+let signGlow = 0;
+const ORBIT_TEXT = "🎁 Gift for Manh Manh 🎄";
+let textAngle = 0;
+
 let rotY = 0;
 
-// 1. Tạo Tuyết rơi toàn màn hình
-const snowfall = Array.from({ length: 200 }, () => ({
-  x: Math.random() * w, y: Math.random() * h,
-  s: Math.random() * 2 + 1, v: Math.random() * 1 + 0.5
-}));
-
-// 2. Tạo Sân tuyết 3D
-const ground = Array.from({ length: 800 }, () => {
-  const a = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 0.5) * 500;
-  return { x: Math.cos(a) * r, y: 30, z: Math.sin(a) * r, r: Math.random() * 2 + 1 };
-});
-
-// 3. Tạo Cây (Lá và Quả)
-const treePoints = Array.from({ length: 6000 }, () => {
+// ================= TREE =================
+const tree = [];
+for (let i = 0; i < TREE_POINTS; i++) {
   const t = Math.random();
   const y = -t * TREE_HEIGHT;
-  const r = (1 - t) * TREE_RADIUS * (0.6 + Math.random() * 0.4);
-  const angle = Math.random() * Math.PI * 2;
-  return {
-    x: Math.cos(angle) * r, y, z: Math.sin(angle) * r,
-    r: Math.random() * 1.5 + 0.5,
-    color: Math.random() < 0.1 ? "#e63946" : `rgb(20, ${100 + Math.random() * 80}, 40)`, // Đỏ hoặc Xanh
-    twinkle: Math.random() * Math.PI
-  };
-});
+  const r = (1 - t) * TREE_RADIUS * (0.5 + Math.random() * 0.7);
+  const angle = t * 20 * Math.PI + Math.random();
 
-// 4. Tạo Dải ruy băng 3D
-const garlands = Array.from({ length: 1800 }, (_, i) => {
-  const t = i / 1800;
-  const y = -t * TREE_HEIGHT;
-  const r = (1 - t) * TREE_RADIUS * 1.05;
-  const angle = t * Math.PI * 15;
-  return { x: Math.cos(angle) * r, y, z: Math.sin(angle) * r };
-});
+  const x = Math.cos(angle) * r;
+  const z = Math.sin(angle) * r;
 
-// 5. Tạo các Icon Noel (Vẽ bằng code để có màu Đỏ/Trắng/Xanh)
-const icons = Array.from({ length: 30 }, () => {
-  const angle = Math.random() * Math.PI * 2;
-  const r = TREE_RADIUS + 80 + Math.random() * 100;
-  return {
-    x: Math.cos(angle) * r, y: -Math.random() * TREE_HEIGHT, z: Math.sin(angle) * r,
-    type: Math.floor(Math.random() * 3), // 0: Quà, 1: Chuông, 2: Kẹo
-    color: ["#f1faee", "#e63946", "#ffd700"][Math.floor(Math.random() * 3)],
-    phase: Math.random() * Math.PI * 2
-  };
-});
+  let color;
+  if (Math.random() < 0.05) {
+    color = "rgb(255,80,80)";
+  } else {
+    const g = 120 + Math.random() * 100;
+    color = `rgb(50,${g},80)`;
+  }
 
-function project(p) {
-  const cos = Math.cos(rotY), sin = Math.sin(rotY);
-  const x = p.x * cos - p.z * sin;
-  const z = p.x * sin + p.z * cos + 1000;
-  const s = 1200 / z;
-  return { x: cx + x * s, y: cy + p.y * s, r: (p.r || 2) * s, z: z, s: s };
+  tree.push({ x, y, z, r: Math.random()*1.5+0.4, color });
+}
+// ================= LUXURY GARLAND =================
+const garlands = [];
+const GARLAND_LAYERS = 3;
+
+for (let layer = 0; layer < GARLAND_LAYERS; layer++) {
+  for (let i = 0; i < 800; i++) {
+    const t = i / 800;
+    const y = -TREE_HEIGHT * (0.15 + t * 0.7);
+
+    // bán kính giảm dần theo chiều cao → bám cây
+    const baseR = TREE_RADIUS * (1 - (y / -TREE_HEIGHT));
+    const r = baseR * (1.2 - layer * 0.12);
+
+    // xoắn theo hình nón
+    const a = t * Math.PI * 10 + layer * 1.6;
+
+    garlands.push({
+      x: Math.cos(a) * r,
+      y: y + Math.sin(a * 2) * 6,
+      z: Math.sin(a) * r,
+      r: Math.random() * 1.8 + 0.8,
+      sparkle: Math.random() * Math.PI * 2,
+      depth: layer
+    });
+  }
 }
 
-function drawGift(ctx, x, y, size, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x - size/2, y - size/2, size, size);
-  ctx.fillStyle = "#e63946"; // Nơ đỏ
-  ctx.fillRect(x - size/2, y - 2, size, 4);
-  ctx.fillRect(x - 2, y - size/2, 4, size);
+
+// ================= STAR =================
+const star = [];
+for (let i = 0; i < STAR_POINTS; i++) {
+  const arm = Math.floor(Math.random() * 5);
+  const base = arm * Math.PI * 2 / 5;
+  const outer = Math.random() > 0.5;
+  const r = outer ? STAR_OUTER : STAR_INNER;
+  const a = base + (outer ? 0 : Math.PI / 5);
+
+  star.push({
+    x: Math.cos(a)*r,
+    y: -TREE_HEIGHT - STAR_OFFSET,
+    z: Math.sin(a)*r,
+    r: outer ? 2.5 : 2,
+    glow: outer
+  });
+}
+// ================= FIXED NOEL ICONS =================
+const orbitIcons = [];
+const ICON_TYPES = ["sock", "gift", "bell", "snow"];
+
+for (let i = 0; i < 60; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = TREE_RADIUS + 120 + Math.random() * 160;
+
+  orbitIcons.push({
+    x: Math.cos(a) * r,
+    z: Math.sin(a) * r,
+    y: -Math.random() * TREE_HEIGHT * 0.8,
+    size: Math.random() * 6 + 8,
+    type: ICON_TYPES[Math.floor(Math.random() * ICON_TYPES.length)],
+    sparkle: Math.random() * Math.PI * 2
+  });
 }
 
-function drawBell(ctx, x, y, size) {
-  ctx.fillStyle = "#ffd700";
+
+// ================= TRUNK =================
+const trunk = [];
+for (let i=0;i<300;i++){
+  trunk.push({
+    x:(Math.random()-0.5)*16,
+    y:Math.random()*90,
+    z:(Math.random()-0.5)*16,
+    r:Math.random()*1.5+0.6
+  });
+}
+// ================= SNOW GROUND =================
+const ground = [];
+for (let i = 0; i < 1600; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = Math.random() * 420;
+  ground.push({
+    x: Math.cos(a) * r,
+    y: 90 + Math.random() * 2, // sát chân thân cây
+    z: Math.sin(a) * r,
+    r: Math.random() * 1.8 + 0.6
+  });
+}
+
+// ================= SNOW =================
+const snow=[];
+for(let i=0;i<260;i++){
+  snow.push({
+    x:Math.random()*w-w/2,
+    y:Math.random()*h,
+    s:Math.random()*1.6+0.3,
+    v:Math.random()*0.4+0.5
+  });
+}
+
+// ================= 3D PROJECT =================
+function project(p){
+  const cos=Math.cos(rotY), sin=Math.sin(rotY);
+  const x=p.x*cos-p.z*sin;
+  const z=p.x*sin+p.z*cos+600;
+  const s=700/z;
+  return {x:cx+x*s,y:cy+p.y*s,r:p.r*s};
+}
+function projectStatic(p){
+  const z = p.z + 600;
+  const s = 700 / z;
+  return {
+    x: cx + p.x * s,
+    y: cy + p.y * s,
+    r: s
+  };
+}
+
+function drawIcon(ctx, type, size) {
   ctx.beginPath();
-  ctx.arc(x, y, size/2, Math.PI, 0);
-  ctx.lineTo(x + size/2, y + size/2);
-  ctx.lineTo(x - size/2, y + size/2);
+
+  if (type === "sock") {
+    ctx.moveTo(0, 0);
+    ctx.lineTo(size * 0.6, 0);
+    ctx.lineTo(size * 0.6, size * 0.8);
+    ctx.quadraticCurveTo(
+      size * 0.6, size,
+      size * 0.2, size
+    );
+    ctx.lineTo(size * 0.2, size * 0.6);
+    ctx.lineTo(0, size * 0.6);
+    ctx.closePath();
+  }
+
+  if (type === "gift") {
+    ctx.rect(-size/2, -size/2, size, size);
+    ctx.moveTo(0, -size/2);
+    ctx.lineTo(0, size/2);
+    ctx.moveTo(-size/2, 0);
+    ctx.lineTo(size/2, 0);
+  }
+
+  if (type === "bell") {
+    ctx.arc(0, 0, size * 0.5, Math.PI, 0);
+    ctx.lineTo(size * 0.6, size * 0.6);
+    ctx.arc(0, size * 0.6, size * 0.6, 0, Math.PI);
+    ctx.closePath();
+  }
+
+  if (type === "snow") {
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * size, Math.sin(a) * size);
+    }
+  }
+
+  ctx.fill();
+  ctx.stroke();
+}
+
+// ================= DRAW =================
+function draw(){
+  ctx.clearRect(0,0,w,h);
+
+  // falling snow
+  ctx.fillStyle="rgba(255,255,255,0.8)";
+  for(const s of snow){
+    s.y+=s.v;
+    if(s.y>h) s.y=-10;
+    ctx.beginPath();
+    ctx.arc(cx+s.x,s.y,s.s,0,Math.PI*2);
+    ctx.fill();
+  }
+// ground snow
+for (const p of ground) {
+  const s = project(p);
+  ctx.fillStyle = "rgba(220,240,255,0.95)";
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function draw() {
-  ctx.clearRect(0, 0, w, h);
-
-  // --- Tuyết rơi (Nền) ---
-  ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-  snowfall.forEach(s => {
-    s.y += s.v; if (s.y > h) s.y = -10;
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
-  });
-
-  // --- Sân tuyết 3D ---
-  ground.forEach(p => {
-    const s = project(p);
-    ctx.fillStyle = `rgba(241, 250, 238, ${Math.max(0, 1 - s.z/1800)})`;
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
-  });
-
-  // --- Gom tất cả các vật thể 3D để sắp xếp theo độ sâu (Z-Index) ---
-  const scene = [
-    ...treePoints.map(p => ({ ...project(p), type: 'tree', rawColor: p.color, twinkle: p.twinkle })),
-    ...garlands.map(p => ({ ...project(p), type: 'garland' })),
-    ...icons.map(p => ({ ...project(p), type: 'icon', iconType: p.type, color: p.color, phase: p.phase }))
-  ];
-  scene.sort((a, b) => b.z - a.z); // Vẽ từ xa tới gần
-
-  scene.forEach(p => {
-    ctx.globalAlpha = Math.max(0.1, 1.2 - p.z/1800);
-    
-    if (p.type === 'tree') {
-      const t = 0.6 + Math.sin(Date.now() * 0.003 + p.twinkle) * 0.4;
-      ctx.fillStyle = p.rawColor;
-      if(p.rawColor === "#e63946") ctx.globalAlpha *= t; // Quả đỏ nhấp nháy
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-    } 
-    else if (p.type === 'garland') {
-      ctx.fillStyle = "#ffd700";
-      ctx.shadowBlur = 10; ctx.shadowColor = "gold";
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.6, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-    } 
-    else if (p.type === 'icon') {
-      const bounce = Math.sin(Date.now() * 0.002 + p.phase) * 15;
-      if (p.iconType === 0) drawGift(ctx, p.x, p.y + bounce, p.s * 20, p.color);
-      else if (p.iconType === 1) drawBell(ctx, p.x, p.y + bounce, p.s * 20);
-      else {
-        ctx.font = `${p.s * 25}px Arial`; ctx.fillText("🍭", p.x, p.y + bounce);
-      }
-    }
-    ctx.globalAlpha = 1;
-  });
-
-  // --- Ngôi sao đỉnh (Luôn ở trên cùng) ---
-  const starTop = project({ x: 0, y: -TREE_HEIGHT - 30, z: 0, r: 25 });
-  ctx.save();
-  ctx.shadowBlur = 30; ctx.shadowColor = "#ffd700";
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  for(let i=0; i<10; i++) {
-    const r = i%2===0 ? starTop.r : starTop.r/2;
-    const a = i * Math.PI / 5 - Math.PI/2;
-    ctx.lineTo(starTop.x + Math.cos(a)*r, starTop.y + Math.sin(a)*r);
+  // trunk
+  for(const p of trunk){
+    const s=project(p);
+    ctx.fillStyle="rgb(90,60,40)";
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
   }
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
 
-  rotY += 0.008;
-  requestAnimationFrame(draw);
+  // tree
+  tree.sort((a,b)=>b.z-a.z);
+  for(const p of tree){
+    const s=project(p);
+    ctx.fillStyle=p.color;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  }
+// garland
+// ================= DRAW GARLAND =================
+for (const p of garlands) {
+  p.sparkle += 0.05;
+
+  const s = project(p);
+
+  // sparkle nhấp nháy
+  const glow = 0.5 + Math.sin(p.sparkle) * 0.5;
+
+  // màu vàng luxury (gradient giả)
+  ctx.fillStyle = `rgba(
+    ${240 + glow * 15},
+    ${200 + glow * 30},
+    ${120 + glow * 20},
+    ${0.65 + glow * 0.35}
+  )`;
+
+  ctx.shadowColor = "rgba(255,220,140,0.9)";
+  ctx.shadowBlur = 12 + glow * 10;
+
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r * (0.8 + glow * 0.6), 0, Math.PI * 2);
+  ctx.fill();
+}
+ctx.shadowBlur = 0;
+
+
+  // star
+  for(const p of star){
+    const s=project(p);
+    ctx.fillStyle="gold";
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  }// orbit stars
+// ================= DRAW NOEL ICONS =================
+for (const p of orbitIcons) {
+  p.sparkle += 0.02;
+
+  const glow = 0.6 + Math.sin(p.sparkle) * 0.4;
+  const s = project(p);
+
+  ctx.save();
+  ctx.translate(s.x, s.y);
+  ctx.scale(s.r * 0.04, s.r * 0.04);
+
+  ctx.fillStyle = `rgba(255,230,180,${0.7 + glow * 0.3})`;
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 1.5;
+
+  ctx.shadowColor = "rgba(255,200,150,0.9)";
+  ctx.shadowBlur = 15 + glow * 10;
+
+  drawIcon(ctx, p.type, p.size);
+
+  ctx.restore();
 }
 
-// Bật nhạc khi click
-document.addEventListener("click", () => {
-  const bgm = document.getElementById("bgm");
-  bgm.muted = false;
-  bgm.play();
-});
+// ================= ORBIT TEXT =================
+textAngle += 0.002;
 
+ctx.save();
+ctx.font = "20px 'Segoe Script', cursive";
+ctx.fillStyle = "rgba(255,200,200,0.95)";
+ctx.shadowColor = "rgba(255,150,150,0.8)";
+ctx.shadowBlur = 10;
+ctx.textAlign = "center";
+
+const radiusText = TREE_RADIUS + 85;
+const spacing = 0.22; // khoảng cách chữ – càng nhỏ càng liền
+
+for (let i = 0; i < ORBIT_TEXT.length; i++) {
+  const a = textAngle + i * spacing;
+  const x = Math.cos(a) * radiusText;
+  const z = Math.sin(a) * radiusText;
+  const y = -TREE_HEIGHT * 0.35;
+
+  if (z < 0) continue;
+
+  const p = project({ x, y, z, r: 1 });
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(a + Math.PI / 2);
+  ctx.fillText(ORBIT_TEXT[i], 0, 0);
+  ctx.restore();
+}
+
+ctx.restore();
+
+// ================= SIGNATURE =================
+signGlow += 0.03;
+
+ctx.save();
+ctx.textAlign = "right";
+ctx.font = "22px 'Segoe Script', cursive";
+
+ctx.shadowColor = "rgba(255,215,150,0.8)";
+ctx.shadowBlur = 12 + Math.sin(signGlow) * 4;
+ctx.fillStyle = "rgba(255,230,180,0.95)";
+ctx.fillText(SIGN_TEXT_1, w - 30, h - 60);
+
+ctx.font = "16px 'Segoe Script', cursive";
+ctx.shadowBlur = 8;
+ctx.fillStyle = "rgba(255,255,255,0.8)";
+ctx.fillText(SIGN_TEXT_2, w - 30, h - 35);
+ctx.restore();
+ctx.font = "18px serif";
+ctx.shadowBlur = 10;
+ctx.fillStyle = "rgba(255,120,120,0.9)";
+ctx.fillText("♥", w - 200, h - 58);
+
+  rotY+=0.002;
+  requestAnimationFrame(draw);
+}
 draw();
 </script>
+
 </body>
 </html>
