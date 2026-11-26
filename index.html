@@ -2,467 +2,869 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Realistic 3D Christmas Tree</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Merry Christmas, Khánh Linh</title>
 <style>
 html, body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top, #0b2a35, #020b10);
+  height: 100%;
   overflow: hidden;
-}
-canvas {
-  display: block;
-}
-#hint {
-  position: fixed;
-  bottom: 20px;
-  width: 100%;
-  text-align: center;
-  color: rgba(255,255,255,0.6);
-  font-family: sans-serif;
-  font-size: 14px;
-  pointer-events: none;
-  z-index: 100;
+  -webkit-tap-highlight-color: transparent;
+  background:
+    radial-gradient(ellipse at 50% 110%, #3a2350 0%, transparent 55%),
+    radial-gradient(circle at top, #14254a, #070a1c 70%);
 }
 
-/* --- PHẦN CHỮ CHẠY MỚI THÊM --- */
-/* --- PHẦN CHỮ CHẠY ĐÃ CHỈNH SỬA --- */
-#marquee-container {
+canvas {
   position: fixed;
-  top: 25px;
-  left: 20%; /* Cách mép trái 20% */
-  right: 20%; /* Cách mép phải 20% */
-  width: 60%; /* Chiều rộng còn lại là 60% */
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+canvas.dragging { cursor: grabbing; }
+
+/* ---------- Trăng khuyết ---------- */
+.moon {
+  position: fixed;
+  top: 6vh;
+  right: 9vw;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  box-shadow: -9px 11px 0 0 #f7d08a;
+  filter: drop-shadow(0 0 6px rgba(255, 220, 140, .9)) drop-shadow(0 0 16px rgba(255, 200, 120, .45));
+  pointer-events: none;
+}
+
+/* ---------- Tiêu đề + chữ chạy ---------- */
+.top {
+  position: fixed;
+  top: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 2s ease 1s;
+}
+.opened .top { opacity: 1; }
+
+.top h1 {
+  margin: 0;
+  font-family: 'Segoe Script', cursive, sans-serif;
+  font-weight: normal;
+  font-size: clamp(30px, 5vw, 46px);
+  color: #ffcccc;
+  text-shadow: 0 0 10px #ff0000, 0 0 20px #ff6666;
+}
+
+#marquee-container {
+  margin: 6px auto 0;
+  width: 60%;
   white-space: nowrap;
   overflow: hidden;
-  pointer-events: none;
-  z-index: 100;
-  /* Thêm một chút gradient mờ ở 2 đầu để chữ ẩn hiện nhẹ nhàng hơn */
   mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
 }
-
 #marquee-text {
   display: inline-block;
   font-family: 'Segoe Script', cursive, sans-serif;
-  font-size: 26px;
+  font-size: 22px;
   color: #ffcccc;
   text-shadow: 0 0 10px #ff0000, 0 0 20px #ff6666;
-  padding-left: 100%; /* Đẩy chữ bắt đầu từ bên phải của container */
-  animation: marquee 30s linear infinite;
+  padding-left: 100%;
+  animation: marquee 55s linear infinite;
 }
-
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
 }
 
+/* ---------- Chữ ký ---------- */
+.sign {
+  position: fixed;
+  right: 30px;
+  bottom: 28px;
+  text-align: right;
+  font-family: 'Segoe Script', cursive, sans-serif;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 2s ease 3s;
+}
+.opened .sign { opacity: 1; }
+.sign .to {
+  font-size: 22px;
+  color: rgba(255, 230, 180, .95);
+  text-shadow: 0 0 12px rgba(255, 215, 150, .8);
+  animation: signGlow 3.5s ease-in-out infinite;
+}
+.sign .from {
+  font-size: 16px;
+  color: rgba(255, 255, 255, .8);
+  margin-top: 4px;
+}
+@keyframes signGlow {
+  50% { text-shadow: 0 0 18px rgba(255, 215, 150, .95); }
+}
+
+/* ---------- Nút nhạc ---------- */
+.music {
+  position: fixed;
+  left: 26px;
+  bottom: 26px;
+  z-index: 6;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 204, 204, .7);
+  background: transparent;
+  color: #ffcccc;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  text-shadow: 0 0 8px #ff6666;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s ease 2s;
+}
+.opened .music { opacity: 1; pointer-events: auto; }
+.music.playing { animation: spin 6s linear infinite; }
+.music:not(.playing)::after {
+  content: "";
+  position: absolute;
+  left: 8px; right: 8px; top: 50%;
+  height: 1.5px;
+  background: rgba(255, 204, 204, .8);
+  transform: rotate(-40deg);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#hint {
+  position: fixed;
+  bottom: 20px;
+  width: 100%;
+  text-align: center;
+  color: rgba(255, 255, 255, .6);
+  font-family: sans-serif;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+#hint.show { opacity: 1; }
+
+/* ---------- Màn mở quà ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(5, 8, 24, .55);
+  transition: opacity 1.4s ease, visibility 1.4s;
+}
+.opened .intro { opacity: 0; visibility: hidden; }
+.intro .gift {
+  width: 72px;
+  height: 72px;
+  animation: float 3s ease-in-out infinite;
+}
+.intro .to {
+  font-family: 'Segoe Script', cursive, sans-serif;
+  font-size: clamp(30px, 7vw, 44px);
+  color: #ffcccc;
+  text-shadow: 0 0 10px #ff0000, 0 0 20px #ff6666;
+}
+.intro .tap {
+  font-family: 'Segoe Script', cursive, sans-serif;
+  font-size: 16px;
+  color: rgba(255, 230, 180, .9);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+@keyframes float { 50% { transform: translateY(-10px) rotate(-5deg); } }
+@keyframes breathe { 50% { opacity: .45; } }
+
+@media (max-width: 560px) {
+  #marquee-container { width: 86%; }
+  #marquee-text { font-size: 18px; }
+  .moon { top: 21vh; right: 8vw; width: 40px; height: 40px; box-shadow: -7px 8px 0 0 #f7d08a; }
+  .sign { right: 18px; bottom: 20px; }
+  .sign .to { font-size: 18px; }
+  .sign .from { font-size: 13px; }
+  .music { left: 18px; bottom: 20px; }
+  #hint { bottom: 92px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #marquee-text, .intro .gift, .music.playing { animation: none; }
+}
 </style>
 </head>
 <body>
 
-<div id="marquee-container">
-  <div id="marquee-text">🎄 Chúc Manh Manh một mùa Giáng Sinh thật ấm áp, hạnh phúc và luôn rạng rỡ như những ánh sao! Merry Christmas! ❄️</div>
+<div class="moon" aria-hidden="true"></div>
+
+<canvas id="c" aria-label="Cây thông Noel 3D"></canvas>
+
+<header class="top">
+  <h1>Merry Christmas</h1>
+  <div id="marquee-container">
+    <div id="marquee-text"></div>
+  </div>
+</header>
+
+<div class="sign">
+  <div class="to">For <span data-name></span> ❄️</div>
+  <div class="from">— from <span data-from></span></div>
 </div>
 
-<audio id="bgm" loop muted>
+<button class="music" id="music" type="button" aria-label="Bật/tắt nhạc">♪</button>
+
+<div id="hint">Kéo để xoay cây · chạm để thả tim ♡</div>
+
+<div class="intro" id="intro" role="button" tabindex="0" aria-label="Mở quà">
+  <svg class="gift" viewBox="0 0 84 84" aria-hidden="true">
+    <rect x="14" y="36" width="56" height="40" rx="4" fill="#e8667a"/>
+    <rect x="10" y="26" width="64" height="14" rx="4" fill="#f08a9a"/>
+    <rect x="37" y="26" width="10" height="50" fill="#ffe6b4"/>
+    <path d="M42 26c-6-12-22-14-20-4 1 5 12 5 20 4zM42 26c6-12 22-14 20-4-1 5-12 5-20 4z" fill="none" stroke="#ffe6b4" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="42" cy="25" r="4" fill="#fff3da"/>
+  </svg>
+  <div class="to">Gửi <span data-name></span></div>
+  <div class="tap">chạm vào để mở quà nhé ✨</div>
+</div>
+
+<audio id="bgm" loop preload="auto">
   <source src="./Lofi Jingle Bells.mp3" type="audio/mpeg">
 </audio>
 
-<canvas id="c"></canvas>
-<div id="hint">Click anywhere to enable sound 🎵</div>
-
 <script>
-const bgm = document.getElementById("bgm");
-const hint = document.getElementById("hint");
+// ===================== CẤU HÌNH =====================
+const CONFIG = {
+  name: "Khánh Linh",
+  from: "MNC",
+  ring: "Gift for Khánh Linh  ♡  Merry Christmas  ✦  ",
+  wishes: [
+    "🎄 Chúc {name} một mùa Giáng Sinh thật ấm áp, hạnh phúc và luôn rạng rỡ như những ánh sao!",
+    "Mong những điều dịu dàng nhất sẽ tìm đến {name} ✨",
+    "Merry Christmas & Happy New Year ❄️"
+  ]
+};
 
-// 🔊 bật tiếng sau click
-let soundEnabled = false;
-function enableSound() {
-  if (soundEnabled) return;
-  soundEnabled = true;
+const $ = s => document.querySelector(s);
+document.querySelectorAll("[data-name]").forEach(el => el.textContent = CONFIG.name);
+document.querySelectorAll("[data-from]").forEach(el => el.textContent = CONFIG.from);
+$("#marquee-text").textContent = CONFIG.wishes.map(s => s.replaceAll("{name}", CONFIG.name)).join("     ·     ");
 
-  bgm.muted = false;
-  bgm.volume = 0;
+// ===================== TIỆN ÍCH =====================
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+const easeOutBack = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2; };
+const TAU = Math.PI * 2;
+const PASTELS = ["#ffc4d6", "#ffd9b8", "#d9c8ff", "#c3e2ff", "#fff1b8", "#ffcccc"];
 
-  bgm.play().then(() => {
-    const fade = setInterval(() => {
-      if (bgm.volume < 0.6) {
-        bgm.volume += 0.02;
-      } else {
-        clearInterval(fade);
-      }
-    }, 120);
-  }).catch(err => {
-    console.log("Audio play blocked:", err);
-  });
-
-  hint.style.display = "none";
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const t = amt < 0 ? 0 : 255, p = Math.abs(amt);
+  r = Math.round(r + (t - r) * p); g = Math.round(g + (t - g) * p); b = Math.round(b + (t - b) * p);
+  return `rgb(${r},${g},${b})`;
 }
 
-document.addEventListener("click", enableSound);
-document.addEventListener("touchstart", enableSound);
+// ===================== SPRITES =====================
+function sprite(size, paint) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  paint(c.getContext("2d"), size);
+  return c;
+}
+// Đèn: lõi rõ, quầng sáng ngắn (không bị nhoè)
+function bulb(rgb) {
+  return sprite(48, (g, s) => {
+    const r = s / 2, gr = g.createRadialGradient(r, r, 0, r, r, r);
+    gr.addColorStop(0, "rgba(255,255,255,1)");
+    gr.addColorStop(0.16, `rgba(${rgb},1)`);
+    gr.addColorStop(0.3, `rgba(${rgb},0.35)`);
+    gr.addColorStop(0.65, `rgba(${rgb},0)`);
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  });
+}
+function bauble(hex) {
+  return sprite(64, (g, s) => {
+    const r = s / 2 - 3, cx = s / 2, cy = s / 2 + 2;
+    const gr = g.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.05, cx, cy, r);
+    gr.addColorStop(0, "rgba(255,255,255,.95)");
+    gr.addColorStop(0.2, shade(hex, 0.3));
+    gr.addColorStop(0.65, hex);
+    gr.addColorStop(1, shade(hex, -0.45));
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill();
+    g.fillStyle = "#f3d9a4"; g.fillRect(cx - 4, cy - r - 2, 8, 5);
+  });
+}
 
-// ================= CANVAS =================
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+const BULB_COLORS = ["255,214,150", "255,214,150", "255,195,120", "255,240,180", "255,170,190", "255,225,160"];
+const BULB_SPR = BULB_COLORS.map(bulb);
+const BAUBLE_SPR = ["#f2899c", "#f6d28f", "#cbbcf6", "#a9cdf2", "#ffffff", "#e85a6f"].map(bauble);
+const RIB_GOLD = bulb("255,215,150");
+const RIB_AMBER = bulb("255,190,110");
+const STAR_GLOW = bulb("255,225,150");
 
-let w, h, cx, cy;
+// ===================== CANVAS =====================
+const cv = $("#c"), ctx = cv.getContext("2d");
+let W, H, DPR, k, CX, CY;
+
+const TREE_H = 520, TREE_R = 205, GROUND = 55, CAM = 1000, TILT = 0.16;
+const RING_R = TREE_R + 82, RING_Y = -TREE_H * 0.33;
+
 function resize() {
-  w = canvas.width = window.innerWidth;
-  h = canvas.height = window.innerHeight;
-  cx = w / 2;
-  cy = h * 0.65;
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // Cây luôn nằm dưới phần tiêu đề + chữ chạy, không để chữ đè lên ngôi sao
+  // ABOVE đã tính cả phối cảnh (ngọn cây nghiêng về phía camera nên to hơn ~10%)
+  const ABOVE = 650, BELOW = GROUND + 30;
+  const top = $(".top").getBoundingClientRect().bottom + 14, bottom = H * 0.93;
+  k = Math.min(H / 960, W / 640, (bottom - top) / (ABOVE + BELOW));
+  CX = W / 2;
+  CY = (top + ABOVE * k + bottom - BELOW * k) / 2;
+  makeSky();
+  makeSnow();
 }
-window.addEventListener("resize", resize);
-resize();
 
-// ================= CONFIG =================
-const TREE_HEIGHT = 520;
-const TREE_RADIUS = 190;
-const TREE_POINTS = 4500;
-const STAR_OFFSET = 25;
-const STAR_POINTS = 320;
-const STAR_OUTER = 14;
-const STAR_INNER = 6;
-const SIGN_TEXT_1 = "For Manh Manh ❄️";
-const SIGN_TEXT_2 = "— from MNC";
-let signGlow = 0;
-const ORBIT_TEXT = "🎁 Gift for Manh Manh 🎄";
-let textAngle = 0;
+// ---------- Phép chiếu 3D ----------
+let cR = 1, sR = 0;
+const cT = Math.cos(TILT), sT = Math.sin(TILT);
+const O = { x: 0, y: 0, f: 1, z: 0 };
+function P(x, y, z) {
+  const X = x * cR - z * sR;
+  const Z = x * sR + z * cR;
+  const Y = y * cT - Z * sT;
+  const Zt = y * sT + Z * cT;
+  const f = CAM / (Zt + CAM) * k;
+  O.x = CX + X * f; O.y = CY + Y * f; O.f = f; O.z = Z;
+  return O;
+}
 
-let rotY = 0;
+// ===================== CẢNH =====================
+function envelope(t) {
+  const tiers = 7, local = (t * tiers) % 1;
+  return TREE_R * Math.pow(1 - t, 1.05) * (0.6 + 0.4 * (1 - local));
+}
 
-// ================= TREE =================
-const tree = [];
-for (let i = 0; i < TREE_POINTS; i++) {
+// Lá thông + quả châu chung một danh sách để sắp xếp theo chiều sâu
+const treeItems = [];
+let nNeedles = 0;
+while (nNeedles < 4200) {
   const t = Math.random();
-  const y = -t * TREE_HEIGHT;
-  const r = (1 - t) * TREE_RADIUS * (0.5 + Math.random() * 0.7);
-  const angle = t * 20 * Math.PI + Math.random();
-
-  const x = Math.cos(angle) * r;
-  const z = Math.sin(angle) * r;
-
+  if (Math.random() > (1 - t) * 0.9 + 0.12) continue;
+  const env = envelope(t);
+  const r = env * (0.68 + 0.32 * Math.sqrt(Math.random()));
+  const a = Math.random() * TAU;
+  const roll = Math.random();
   let color;
-  if (Math.random() < 0.05) {
-    color = "rgb(255,80,80)";
-  } else {
-    const g = 120 + Math.random() * 100;
-    color = `rgb(50,${g},80)`;
+  if (roll < 0.04) color = "rgb(255,150,170)";
+  else if (roll < 0.08) color = "rgb(255,236,244)";
+  else color = `rgb(${40 + Math.random() * 30},${120 + Math.random() * 100},${80 + Math.random() * 30})`;
+  treeItems.push({
+    kind: 0,
+    x: Math.cos(a) * r, z: Math.sin(a) * r,
+    y: -t * TREE_H + (r / TREE_R) * 14,
+    t, size: rand(1.2, 2.8), color, rz: 0
+  });
+  nNeedles++;
+}
+for (let i = 0; i < 34; i++) {
+  const t = rand(0.07, 0.84), a = Math.random() * TAU, r = envelope(t) * 0.98;
+  treeItems.push({ kind: 1, x: Math.cos(a) * r, z: Math.sin(a) * r, y: -t * TREE_H + (r / TREE_R) * 14 + 6, t, size: rand(7, 11), spr: BAUBLE_SPR[i % BAUBLE_SPR.length], rz: 0 });
+}
+
+const bulbs = [];
+for (let i = 0; i < 130; i++) {
+  const t = rand(0.03, 0.93), a = Math.random() * TAU, r = envelope(t) * rand(0.96, 1.03);
+  bulbs.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, y: -t * TREE_H + (r / TREE_R) * 14, t, spr: pick(BULB_SPR), ph: Math.random() * TAU, sp: rand(1.2, 3) });
+}
+
+const ribbons = [];
+[[0, RIB_GOLD], [Math.PI, RIB_AMBER]].forEach(([off, spr]) => {
+  const N = 380;
+  for (let i = 0; i < N; i++) {
+    const u = i / N, t = 0.04 + u * 0.86;
+    const a = u * 5.5 * TAU + off;
+    const r = TREE_R * Math.pow(1 - t, 1.05) * 1.03;
+    ribbons.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, y: -t * TREE_H + (r / TREE_R) * 14 + Math.sin(a * 3) * 3, t, u, spr });
   }
+});
 
-  tree.push({ x, y, z, r: Math.random()*1.5+0.4, color });
-}
-// ================= LUXURY GARLAND =================
-const garlands = [];
-const GARLAND_LAYERS = 1;
-
-for (let layer = 0; layer < GARLAND_LAYERS; layer++) {
-  for (let i = 0; i < 800; i++) {
-    const t = i / 800;
-    const y = -TREE_HEIGHT * (0.15 + t * 0.7);
-    const baseR = TREE_RADIUS * (1 - (y / -TREE_HEIGHT));
-    const r = baseR * (1.2 - layer * 0.12);
-    const a = t * Math.PI * 10 + layer * 1.6;
-
-    garlands.push({
-      x: Math.cos(a) * r,
-      y: y + Math.sin(a * 2) * 6,
-      z: Math.sin(a) * r,
-      r: Math.random() * 1.8 + 0.8,
-      sparkle: Math.random() * Math.PI * 2,
-      depth: layer
-    });
-  }
-}
-
-// ================= STAR =================
-const star = [];
-for (let i = 0; i < STAR_POINTS; i++) {
-  const arm = Math.floor(Math.random() * 5);
-  const base = arm * Math.PI * 2 / 5;
-  const outer = Math.random() > 0.5;
-  const r = outer ? STAR_OUTER : STAR_INNER;
-  const a = base + (outer ? 0 : Math.PI / 5);
-
-  star.push({
-    x: Math.cos(a)*r,
-    y: -TREE_HEIGHT - STAR_OFFSET,
-    z: Math.sin(a)*r,
-    r: outer ? 2.5 : 2,
-    glow: outer
-  });
-}
-
-// ================= FIXED NOEL ICONS =================
-const orbitIcons = [];
-const ICON_TYPES = ["sock", "gift", "bell", "snow"];
-for (let i = 0; i < 60; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const r = TREE_RADIUS + 120 + Math.random() * 160;
-  orbitIcons.push({
-    x: Math.cos(a) * r,
-    z: Math.sin(a) * r,
-    y: -Math.random() * TREE_HEIGHT * 0.8,
-    size: Math.random() * 6 + 8,
-    type: ICON_TYPES[Math.floor(Math.random() * ICON_TYPES.length)],
-    sparkle: Math.random() * Math.PI * 2
-  });
-}
-
-// ================= TRUNK =================
-const trunk = [];
-for (let i=0;i<220;i++){
-  trunk.push({
-    x:(Math.random()-0.5)*14,
-    y:Math.random()*55,
-    z:(Math.random()-0.5)*14,
-    r:Math.random()*1.4+0.5
-  });
-}
-
-// ================= GIFTS (GIỮ LẠI THEO LOGIC CŨ) =================
+const GIFT_SET = [["#e8667a", "#fff0d6"], ["#7fb8a4", "#fff0d6"], ["#f6efe2", "#e8667a"], ["#8fa6e0", "#ffe6b4"], ["#b99be0", "#fff0f5"], ["#f2c27a", "#fff6e0"]];
 const gifts = [];
-const GIFT_COLORS = ["#c0392b", "#27ae60", "#f1c40f", "#8e44ad"];
-for (let i = 0; i < 18; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const d = 60 + Math.random() * 130;
-  gifts.push({
-    x: Math.cos(a) * d,
-    z: Math.sin(a) * d,
-    y: 55,
-    s: 14 + Math.random() * 18,
-    color: GIFT_COLORS[i % GIFT_COLORS.length]
+for (let i = 0; i < 9; i++) {
+  const a = i * TAU / 9 + rand(-0.25, 0.25), d = rand(85, 175);
+  const [c, r] = GIFT_SET[i % GIFT_SET.length];
+  gifts.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, s: rand(24, 38), h: rand(0.65, 1), c, r, t: rand(0.05, 0.4), zr: 0 });
+}
+
+const groundDots = [];
+for (let i = 0; i < 600; i++) {
+  const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * 330;
+  groundDots.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, s: rand(0.8, 2), ph: Math.random() * TAU, tw: Math.random() < 0.1 });
+}
+
+const ringLights = [];
+for (let i = 0; i < 48; i++) {
+  const a = i * TAU / 48;
+  ringLights.push({ x: Math.cos(a) * 250, z: Math.sin(a) * 250, ph: i * 0.6, spr: i % 2 ? RIB_GOLD : RIB_AMBER });
+}
+
+// ---------- Chữ chạy vòng quanh cây ----------
+const RING_FONT = "20px 'Segoe Script', cursive";
+let ring = [];
+function buildRing() {
+  ctx.save();
+  ctx.font = RING_FONT;
+  const chars = [...CONFIG.ring], widths = chars.map(ch => ctx.measureText(ch).width + 1);
+  const total = widths.reduce((a, b) => a + b, 0);
+  const reps = Math.max(1, Math.round(TAU * RING_R / total));
+  const step = TAU / (total * reps);
+  ring = [];
+  let acc = 0;
+  for (let r = 0; r < reps; r++) {
+    chars.forEach((ch, i) => { ring.push({ ch, a: (acc + widths[i] / 2) * step }); acc += widths[i]; });
+  }
+  ctx.restore();
+}
+
+// ---------- Bầu trời, tuyết, tim & sao bay ----------
+let skyStars = [], flakes = [], floaters = [];
+function makeSky() {
+  const n = Math.max(120, Math.round(W * H / 7000));
+  skyStars = Array.from({ length: n }, () => ({
+    x: Math.random() * W, y: Math.random() * H * 0.75,
+    s: Math.random() < 0.92 ? rand(0.5, 1.3) : rand(3, 5),
+    ph: Math.random() * TAU, sp: rand(0.6, 2), b: rand(0.4, 0.95)
+  }));
+}
+function newFloater(init) {
+  return {
+    x: Math.random() * W, y: init ? Math.random() * H : H + 20,
+    vy: rand(10, 24), sway: rand(10, 28), ph: Math.random() * TAU,
+    rot: Math.random() * TAU, vr: rand(-0.6, 0.6), size: rand(4, 8),
+    kind: Math.random() < 0.55 ? 0 : 1, color: pick(PASTELS), a: rand(0.4, 0.8)
+  };
+}
+function makeSnow() {
+  const n = Math.min(260, Math.round(W * H / 6000));
+  flakes = Array.from({ length: n }, () => {
+    const z = Math.random();
+    return { x: Math.random() * W, y: Math.random() * H, z, ph: Math.random() * TAU, size: 0.6 + z * 2.2, v: 18 + z * 45 };
   });
+  floaters = Array.from({ length: Math.min(26, Math.round(W / 50)) }, () => newFloater(true));
 }
 
-// ================= SNOW MOUND =================
-const snowMound = [];
-for (let i = 0; i < 900; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const r = Math.random() * 160;
-  snowMound.push({
-    x: Math.cos(a) * r,
-    z: Math.sin(a) * r,
-    y: 53 + Math.random() * 6,
-    r: Math.random() * 2 + 1
-  });
-}
-
-// ================= GROUND LIGHTS =================
-const groundLights = [];
-for (let i = 0; i < 60; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const r = 150 + Math.random() * 60;
-  groundLights.push({
-    x: Math.cos(a) * r,
-    z: Math.sin(a) * r,
-    y: 55,
-    p: Math.random() * Math.PI * 2
-  });
-}
-
-// ================= SNOW GROUND =================
-const ground = [];
-for (let i = 0; i < 1600; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const r = Math.random() * 420;
-  ground.push({
-    x: Math.cos(a) * r,
-    y: 55 + Math.random() * 2,
-    z: Math.sin(a) * r,
-    r: Math.random() * 1.8 + 0.6
-  });
-}
-
-// ================= SNOW =================
-const snow=[];
-for(let i=0;i<260;i++){
-  snow.push({
-    x:Math.random()*w-w/2,
-    y:Math.random()*h,
-    s:Math.random()*1.6+0.3,
-    v:Math.random()*0.4+0.5
-  });
-}
-
-// ================= 3D PROJECT =================
-function project(p){
-  const cos=Math.cos(rotY), sin=Math.sin(rotY);
-  const x=p.x*cos-p.z*sin;
-  const z=p.x*sin+p.z*cos+600;
-  const s=700/z;
-  return {x:cx+x*s,y:cy+p.y*s,r:p.r*s};
-}
-
-function drawIcon(ctx, type, size) {
+function heartPath(s) {
   ctx.beginPath();
-  if (type === "sock") {
-    ctx.moveTo(0, 0); ctx.lineTo(size * 0.6, 0); ctx.lineTo(size * 0.6, size * 0.8);
-    ctx.quadraticCurveTo(size * 0.6, size, size * 0.2, size);
-    ctx.lineTo(size * 0.2, size * 0.6); ctx.lineTo(0, size * 0.6); ctx.closePath();
+  ctx.moveTo(0, s * 0.45);
+  ctx.bezierCurveTo(-s * 1.2, -s * 0.3, -s * 0.5, -s * 1.1, 0, -s * 0.4);
+  ctx.bezierCurveTo(s * 0.5, -s * 1.1, s * 1.2, -s * 0.3, 0, s * 0.45);
+  ctx.closePath();
+}
+function starPath(x, y, R, r, sx = 1) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R;
+    const px = x + Math.cos(a) * rr * sx, py = y + Math.sin(a) * rr;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
   }
-  if (type === "gift") {
-    ctx.rect(-size/2, -size/2, size, size);
-    ctx.moveTo(0, -size/2); ctx.lineTo(0, size/2);
-    ctx.moveTo(-size/2, 0); ctx.lineTo(size/2, 0);
+  ctx.closePath();
+}
+
+const shooting = [];
+let nextShoot = 3;
+const bursts = [];
+function burst(x, y, n = 18, power = 1) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TAU, sp = rand(50, 200) * power;
+    bursts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50 * power, life: 0, max: rand(1.2, 2), size: rand(4, 8), rot: Math.random() * TAU, vr: rand(-3, 3), kind: Math.random() < 0.6 ? 0 : 1, color: pick(PASTELS) });
   }
-  if (type === "bell") {
-    ctx.arc(0, 0, size * 0.5, Math.PI, 0);
-    ctx.lineTo(size * 0.6, size * 0.6);
-    ctx.arc(0, size * 0.6, size * 0.6, 0, Math.PI); ctx.closePath();
-  }
-  if (type === "snow") {
-    for (let i = 0; i < 6; i++) {
-      const a = i * Math.PI / 3;
-      ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * size, Math.sin(a) * size);
+}
+
+// ===================== TRẠNG THÁI =====================
+let rotY = 0.4, spin = 0.25, ringRot = 0;
+const AUTO_SPIN = 0.25;
+let opened = false, openedAt = 0, reveal = 0, starBurstDone = false;
+let time = 0, last = performance.now();
+let dragging = false;
+
+// ===================== VẼ =====================
+function drawSky(dt) {
+  for (const s of skyStars) {
+    const a = s.b * (0.55 + 0.45 * Math.sin(time * s.sp + s.ph));
+    if (s.s > 2) {
+      ctx.strokeStyle = `rgba(255,245,230,${a})`; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(s.x - s.s, s.y); ctx.lineTo(s.x + s.s, s.y);
+      ctx.moveTo(s.x, s.y - s.s); ctx.lineTo(s.x, s.y + s.s);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.fillRect(s.x, s.y, s.s, s.s);
     }
   }
-  ctx.fill(); ctx.stroke();
+
+  nextShoot -= dt;
+  if (nextShoot <= 0) {
+    nextShoot = rand(5, 10);
+    const fromRight = Math.random() < 0.5;
+    shooting.push({ x: fromRight ? rand(W * 0.5, W) : rand(0, W * 0.5), y: rand(0, H * 0.3), vx: (fromRight ? -1 : 1) * rand(450, 650), vy: rand(150, 260), life: 0, max: rand(0.7, 1.1) });
+  }
+  ctx.lineCap = "round";
+  for (let i = shooting.length - 1; i >= 0; i--) {
+    const s = shooting[i];
+    s.life += dt; s.x += s.vx * dt; s.y += s.vy * dt;
+    if (s.life > s.max) { shooting.splice(i, 1); continue; }
+    const a = Math.sin(Math.PI * s.life / s.max);
+    const tx = s.x - s.vx * 0.16, ty = s.y - s.vy * 0.16;
+    const lg = ctx.createLinearGradient(s.x, s.y, tx, ty);
+    lg.addColorStop(0, `rgba(255,240,245,${a})`); lg.addColorStop(1, "rgba(255,200,220,0)");
+    ctx.strokeStyle = lg; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(tx, ty); ctx.stroke();
+  }
 }
 
-// ================= DRAW LOOP =================
-function draw(){
-  ctx.clearRect(0,0,w,h);
-
-  // Tuyết rơi
-  ctx.fillStyle="rgba(255,255,255,0.8)";
-  for(const s of snow){
-    s.y+=s.v;
-    if(s.y>h) s.y=-10;
-    ctx.beginPath();
-    ctx.arc(cx+s.x,s.y,s.s,0,Math.PI*2);
-    ctx.fill();
-  }
-
-  // Nền tuyết
-  for (const p of ground) {
-    const s = project(p);
-    ctx.fillStyle = "rgba(220,240,255,0.95)";
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // Trunk
-  for(const p of trunk){
-    const s=project(p);
-    ctx.fillStyle="rgb(90,60,40)";
-    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
-  }
-
-  // Gifts
-  for (const g of gifts) {
-    const s = project(g);
-    const size = g.s * s.r;
-    ctx.fillStyle = g.color;
-    ctx.fillRect(s.x - size/2, s.y - size/2, size, size);
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y - size/2); ctx.lineTo(s.x, s.y + size/2);
-    ctx.moveTo(s.x - size/2, s.y); ctx.lineTo(s.x + size/2, s.y);
-    ctx.stroke();
-  }
-
-  // Cây thông
-  tree.sort((a,b)=>b.z-a.z);
-  for(const p of tree){
-    const s=project(p);
-    ctx.fillStyle=p.color;
-    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
-  }
-
-  // Garland
-  for (const p of garlands) {
-    p.sparkle += 0.05;
-    const s = project(p);
-    const glow = 0.5 + Math.sin(p.sparkle) * 0.5;
-    ctx.fillStyle = `rgba(${240 + glow * 15}, ${200 + glow * 30}, ${120 + glow * 20}, ${0.65 + glow * 0.35})`;
-    ctx.shadowColor = "rgba(255,220,140,0.9)";
-    ctx.shadowBlur = 12 + glow * 10;
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.r * (0.8 + glow * 0.6), 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.shadowBlur = 0;
-
-  // Ngôi sao
-  for(const p of star){
-    const s=project(p);
-    ctx.fillStyle="gold";
-    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
-  }
-
-  // Icons
-  for (const p of orbitIcons) {
-    p.sparkle += 0.02;
-    const glow = 0.6 + Math.sin(p.sparkle) * 0.4;
-    const s = project(p);
+function drawFloaters(dt) {
+  for (let i = 0; i < floaters.length; i++) {
+    const f = floaters[i];
+    f.y -= f.vy * dt; f.rot += f.vr * dt;
+    if (f.y < -20) { floaters[i] = newFloater(false); continue; }
+    const x = f.x + Math.sin(time * 0.6 + f.ph) * f.sway;
+    // mờ dần khi bay lên cao
+    ctx.globalAlpha = f.a * clamp(f.y / (H * 0.35));
+    ctx.fillStyle = f.color;
     ctx.save();
-    ctx.translate(s.x, s.y);
-    ctx.scale(s.r * 0.04, s.r * 0.04);
-    ctx.fillStyle = `rgba(255,230,180,${0.7 + glow * 0.3})`;
-    ctx.strokeStyle = "rgba(255,255,255,0.8)";
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = "rgba(255,200,150,0.9)";
-    ctx.shadowBlur = 15 + glow * 10;
-    drawIcon(ctx, p.type, p.size);
+    ctx.translate(x, f.y); ctx.rotate(f.kind ? f.rot : Math.sin(time + f.ph) * 0.3);
+    if (f.kind) { starPath(0, 0, f.size, f.size * 0.45); ctx.fill(); }
+    else { heartPath(f.size); ctx.fill(); }
     ctx.restore();
   }
-
-  // Orbit Text
-  textAngle += 0.002;
-  ctx.save();
-  ctx.font = "20px 'Segoe Script', cursive";
-  ctx.fillStyle = "rgba(255,200,200,0.95)";
-  ctx.shadowBlur = 10;
-  ctx.textAlign = "center";
-  const radiusText = TREE_RADIUS + 85;
-  const spacing = 0.22;
-  for (let i = 0; i < ORBIT_TEXT.length; i++) {
-    const a = textAngle + i * spacing;
-    const x = Math.cos(a) * radiusText;
-    const z = Math.sin(a) * radiusText;
-    const y = -TREE_HEIGHT * 0.35;
-    if (z < 0) continue;
-    const p = project({ x, y, z, r: 1 });
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(a + Math.PI / 2);
-    ctx.fillText(ORBIT_TEXT[i], 0, 0);
-    ctx.restore();
-  }
-  ctx.restore();
-
-  // Signature
-  signGlow += 0.03;
-  ctx.save();
-  ctx.textAlign = "right";
-  ctx.font = "22px 'Segoe Script', cursive";
-  ctx.shadowColor = "rgba(255,215,150,0.8)";
-  ctx.shadowBlur = 12 + Math.sin(signGlow) * 4;
-  ctx.fillStyle = "rgba(255,230,180,0.95)";
-  ctx.fillText(SIGN_TEXT_1, w - 30, h - 60);
-  ctx.font = "16px 'Segoe Script', cursive";
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.fillText(SIGN_TEXT_2, w - 30, h - 35);
-  ctx.restore();
-
-  // Ground Fairy Lights
-  for (const l of groundLights) {
-    l.p += 0.04;
-    const glow = 0.5 + Math.sin(l.p) * 0.5;
-    const s = project(l);
-    ctx.fillStyle = `rgba(255,220,150,${0.4 + glow * 0.4})`;
-    ctx.shadowBlur = 8;
-    ctx.beginPath(); ctx.arc(s.x, s.y, 2.2 + glow * 1.5, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.shadowBlur = 0;
-
-  rotY+=0.008;
-  requestAnimationFrame(draw);
+  ctx.globalAlpha = 1;
 }
 
-draw();
+function drawSnow(dt, minZ, maxZ, wind) {
+  ctx.fillStyle = "#fff";
+  for (const f of flakes) {
+    if (f.z < minZ || f.z >= maxZ) continue;
+    f.y += f.v * dt;
+    f.x += (Math.sin(time * 0.7 + f.ph) * 10 * (0.3 + f.z) + wind * 80 * f.z) * dt;
+    if (f.y > H + 10) { f.y = -10; f.x = Math.random() * W; }
+    if (f.x > W + 10) f.x = -10; else if (f.x < -10) f.x = W + 10;
+    ctx.globalAlpha = 0.45 + f.z * 0.5;
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.size, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGround() {
+  const Rg = 350;
+  const fFront = CAM / (GROUND * sT - Rg * cT + CAM) * k, fBack = CAM / (GROUND * sT + Rg * cT + CAM) * k;
+  const yFront = CY + (GROUND * cT + Rg * sT) * fFront, yBack = CY + (GROUND * cT - Rg * sT) * fBack;
+  const rx = Rg * CAM / (GROUND * sT + CAM) * k, ry = (yFront - yBack) / 2, ey = (yFront + yBack) / 2;
+
+  ctx.save();
+  ctx.translate(CX, ey); ctx.scale(1, ry / rx);
+  const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+  gr.addColorStop(0, "rgba(255,238,205,.95)");
+  gr.addColorStop(0.45, "rgba(255,222,165,.8)");
+  gr.addColorStop(0.75, "rgba(245,190,120,.4)");
+  gr.addColorStop(1, "rgba(230,160,100,0)");
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
+  ctx.restore();
+
+  for (const d of groundDots) {
+    P(d.x, GROUND, d.z);
+    if (d.tw) {
+      const a = Math.max(0, Math.sin(time * 2 + d.ph));
+      if (a < 0.05) continue;
+      const s = 4 * O.f;
+      ctx.strokeStyle = `rgba(255,235,190,${a})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(O.x - s, O.y); ctx.lineTo(O.x + s, O.y); ctx.moveTo(O.x, O.y - s); ctx.lineTo(O.x, O.y + s); ctx.stroke();
+    } else {
+      ctx.fillStyle = "rgba(255,245,220,.9)";
+      ctx.fillRect(O.x, O.y, d.s * O.f, d.s * O.f);
+    }
+  }
+
+  ctx.globalCompositeOperation = "lighter";
+  for (const l of ringLights) {
+    P(l.x, GROUND, l.z);
+    ctx.globalAlpha = (0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * 2.5 - l.ph))) * clamp(reveal * 2);
+    const s = 9 * O.f;
+    ctx.drawImage(l.spr, O.x - s, O.y - s, s * 2, s * 2);
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function drawTrunk() {
+  const top = P(0, 0, 0).y, f = O.f, bot = P(0, GROUND, 0).y, w = 24 * f;
+  ctx.fillStyle = "rgb(90,60,40)";
+  ctx.beginPath();
+  ctx.moveTo(CX - w * 0.4, top); ctx.lineTo(CX + w * 0.4, top);
+  ctx.lineTo(CX + w * 0.55, bot); ctx.lineTo(CX - w * 0.55, bot); ctx.closePath(); ctx.fill();
+}
+
+function drawGift(g) {
+  const pop = easeOutBack(clamp((reveal - g.t) / 0.25));
+  if (pop <= 0) return;
+  P(g.x, GROUND, g.z);
+  const x = O.x, by = O.y, s = g.s * O.f * pop, h = s * g.h, top = by - h, d = s * 0.24;
+
+  ctx.fillStyle = "rgba(60,50,110,.18)";
+  ctx.beginPath(); ctx.ellipse(x, by, s * 0.65, s * 0.13, 0, 0, TAU); ctx.fill();
+
+  ctx.fillStyle = g.c; ctx.fillRect(x - s / 2, top, s, h);
+  ctx.fillStyle = shade(g.c, -0.12); ctx.fillRect(x + s * 0.2, top, s * 0.3, h);
+  ctx.fillStyle = shade(g.c, 0.3);
+  ctx.beginPath();
+  ctx.moveTo(x - s / 2, top); ctx.lineTo(x + s / 2, top); ctx.lineTo(x + s * 0.42, top - d); ctx.lineTo(x - s * 0.42, top - d);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = g.r;
+  ctx.fillRect(x - s * 0.07, top, s * 0.14, h);
+  ctx.beginPath();
+  ctx.moveTo(x - s * 0.07, top); ctx.lineTo(x + s * 0.07, top); ctx.lineTo(x + s * 0.06, top - d); ctx.lineTo(x - s * 0.06, top - d);
+  ctx.closePath(); ctx.fill();
+
+  ctx.strokeStyle = g.r; ctx.lineWidth = Math.max(1.2, s * 0.06);
+  ctx.beginPath(); ctx.ellipse(x - s * 0.13, top - d * 0.5 - s * 0.06, s * 0.13, s * 0.07, -0.35, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x + s * 0.13, top - d * 0.5 - s * 0.06, s * 0.13, s * 0.07, 0.35, 0, TAU); ctx.stroke();
+}
+
+function drawTree() {
+  for (const p of treeItems) p.rz = p.x * sR + p.z * cR;
+  treeItems.sort((a, b) => b.rz - a.rz);
+
+  for (const p of treeItems) {
+    const vis = clamp((reveal - p.t) / 0.06);
+    if (vis <= 0) continue;
+    P(p.x, p.y, p.z);
+    const depth = clamp(0.5 - O.z / (2 * TREE_R));
+    ctx.globalAlpha = vis * (0.5 + 0.5 * depth);
+    const s = p.size * O.f;
+    if (p.kind === 0) {
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(O.x, O.y, s, 0, TAU); ctx.fill();
+    } else {
+      ctx.drawImage(p.spr, O.x - s, O.y - s, s * 2, s * 2);
+    }
+  }
+
+  ctx.globalCompositeOperation = "lighter";
+  for (const r of ribbons) {
+    const vis = clamp((reveal - r.t) / 0.06);
+    if (vis <= 0) continue;
+    P(r.x, r.y, r.z);
+    const depth = clamp(0.5 - O.z / (2 * TREE_R));
+    const pulse = Math.pow(0.5 + 0.5 * Math.sin(r.u * 60 - time * 3), 6);
+    ctx.globalAlpha = vis * (0.35 + 0.65 * pulse) * (0.2 + 0.8 * depth);
+    const s = (3 + pulse * 3) * O.f;
+    ctx.drawImage(r.spr, O.x - s, O.y - s, s * 2, s * 2);
+  }
+  for (const b of bulbs) {
+    const vis = clamp((reveal - b.t) / 0.06);
+    if (vis <= 0) continue;
+    P(b.x, b.y, b.z);
+    const depth = clamp(0.5 - O.z / (2 * TREE_R));
+    const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * b.sp + b.ph));
+    ctx.globalAlpha = vis * tw * (0.2 + 0.8 * depth);
+    const s = 8 * O.f;
+    ctx.drawImage(b.spr, O.x - s, O.y - s, s * 2, s * 2);
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function drawStar() {
+  const pop = easeOutBack(clamp((reveal - 0.95) / 0.3));
+  if (pop <= 0) return;
+  P(0, -TREE_H - 30, 0);
+  const x = O.x, y = O.y, f = O.f * pop;
+
+  if (!starBurstDone && pop > 0.6) { starBurstDone = true; burst(x, y, 36, 1.3); }
+
+  ctx.globalCompositeOperation = "lighter";
+  const hs = 48 * f * (1 + Math.sin(time * 2) * 0.08);
+  ctx.drawImage(STAR_GLOW, x - hs, y - hs, hs * 2, hs * 2);
+  ctx.globalCompositeOperation = "source-over";
+
+  const sx = 0.3 + 0.7 * Math.abs(Math.cos(time * 0.8));
+  starPath(x, y, 24 * f, 10 * f, sx);
+  ctx.fillStyle = "gold"; ctx.fill();
+  ctx.strokeStyle = "rgba(255,250,220,.9)"; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // mấy ngôi sao nhỏ bay quanh đỉnh
+  for (let i = 0; i < 3; i++) {
+    const a = time * 1.2 + i * TAU / 3;
+    const px = x + Math.cos(a) * 38 * f, py = y + Math.sin(a) * 12 * f;
+    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(a);
+    ctx.fillStyle = PASTELS[i];
+    starPath(px, py, 5 * f, 2.2 * f); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawRing(front) {
+  const vis = clamp((reveal - 0.6) / 0.4);
+  if (vis <= 0 || !ring.length) return;
+  ctx.font = RING_FONT;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(255,102,102,.8)";
+  ctx.shadowBlur = front ? 8 : 0;
+  for (const c of ring) {
+    const a = c.a + ringRot;
+    P(Math.cos(a) * RING_R, RING_Y, Math.sin(a) * RING_R);
+    const isFront = O.z <= 0;
+    if (isFront !== front) continue;
+    const nz = O.z / RING_R;
+    const sx = (isFront ? 1 : -1) * Math.max(0.1, Math.abs(nz));
+    ctx.fillStyle = `rgba(255,200,200,${(isFront ? 0.95 : 0.2) * vis})`;
+    ctx.setTransform(DPR * sx * O.f, 0, 0, DPR * O.f, DPR * O.x, DPR * O.y);
+    ctx.fillText(c.ch, 0, 0);
+  }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.shadowBlur = 0;
+}
+
+function drawBursts(dt) {
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const p = bursts[i];
+    p.life += dt;
+    if (p.life > p.max) { bursts.splice(i, 1); continue; }
+    p.vx *= 1 - dt * 1.8; p.vy = p.vy * (1 - dt * 1.8) + 40 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    ctx.globalAlpha = 1 - p.life / p.max;
+    ctx.fillStyle = p.color;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    if (p.kind === 0) heartPath(p.size); else starPath(0, 0, p.size, p.size * 0.45);
+    ctx.fill(); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ===================== VÒNG LẶP =====================
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now; time += dt;
+
+  if (!dragging) {
+    spin += (AUTO_SPIN - spin) * Math.min(1, dt * 1.2);
+    rotY += spin * dt;
+  }
+  ringRot -= dt * 0.2;
+  cR = Math.cos(rotY); sR = Math.sin(rotY);
+  if (opened) reveal = Math.min(1.3, (now - openedAt) / 3400 * 1.3);
+  const wind = clamp((spin - AUTO_SPIN) * 0.6, -2, 2);
+
+  ctx.clearRect(0, 0, W, H);
+  drawSky(dt);
+  drawFloaters(dt);
+  drawSnow(dt, 0, 0.5, wind);
+  drawGround();
+
+  for (const g of gifts) { P(g.x, GROUND, g.z); g.zr = O.z; }
+  gifts.sort((a, b) => b.zr - a.zr);
+
+  for (const g of gifts) if (g.zr > 0) drawGift(g);
+  drawRing(false);
+  drawTrunk();
+  drawTree();
+  for (const g of gifts) if (g.zr <= 0) drawGift(g);
+  drawStar();
+  drawRing(true);
+  drawSnow(dt, 0.5, 1.01, wind);
+  drawBursts(dt);
+
+  requestAnimationFrame(frame);
+}
+
+// ===================== TƯƠNG TÁC =====================
+let lastX = 0, downX = 0, downY = 0, lastMoveT = 0;
+cv.addEventListener("pointerdown", e => {
+  dragging = true; lastX = downX = e.clientX; downY = e.clientY; lastMoveT = performance.now();
+  cv.setPointerCapture(e.pointerId); cv.classList.add("dragging");
+});
+cv.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX, nowT = performance.now();
+  lastX = e.clientX;
+  const d = dx * 0.006;
+  rotY += d;
+  spin = clamp(d / Math.max(0.008, (nowT - lastMoveT) / 1000), -6, 6);
+  lastMoveT = nowT;
+});
+function endDrag(e) {
+  if (!dragging) return;
+  dragging = false; cv.classList.remove("dragging");
+  if (performance.now() - lastMoveT > 120) spin = AUTO_SPIN + (spin - AUTO_SPIN) * 0.2;
+  if (Math.hypot(e.clientX - downX, e.clientY - downY) < 6 && opened) burst(e.clientX, e.clientY);
+}
+cv.addEventListener("pointerup", endDrag);
+cv.addEventListener("pointercancel", endDrag);
+
+// ===================== NHẠC =====================
+const bgm = $("#bgm"), musicBtn = $("#music");
+let fadeTimer = null;
+function fadeTo(target, ms, done) {
+  clearInterval(fadeTimer);
+  const start = bgm.volume, t0 = performance.now();
+  fadeTimer = setInterval(() => {
+    const p = clamp((performance.now() - t0) / ms);
+    bgm.volume = clamp(start + (target - start) * p);
+    if (p >= 1) { clearInterval(fadeTimer); done && done(); }
+  }, 40);
+}
+function setMusicUI(on) { musicBtn.classList.toggle("playing", on); }
+function playMusic() {
+  bgm.volume = 0;
+  bgm.play().then(() => { setMusicUI(true); fadeTo(0.6, 2500); })
+    .catch(err => { console.log("Audio play blocked:", err); setMusicUI(false); });
+}
+musicBtn.addEventListener("click", () => {
+  if (bgm.paused) playMusic();
+  else { setMusicUI(false); fadeTo(0, 600, () => bgm.pause()); }
+});
+
+// ===================== MỞ QUÀ =====================
+const hint = $("#hint"), intro = $("#intro");
+function openGift() {
+  if (opened) return;
+  opened = true; openedAt = performance.now();
+  document.body.classList.add("opened");
+  playMusic();
+  setTimeout(() => hint.classList.add("show"), 4200);
+  setTimeout(() => hint.classList.remove("show"), 12000);
+}
+intro.addEventListener("click", openGift);
+intro.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGift(); } });
+
+// ===================== BẮT ĐẦU =====================
+window.addEventListener("resize", resize);
+resize();
+buildRing();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { resize(); buildRing(); });
+requestAnimationFrame(t => { last = t; frame(t); });
 </script>
-
 </body>
 </html>
